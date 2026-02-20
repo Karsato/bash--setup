@@ -3,7 +3,7 @@
 # --- CONFIGURACIÓN ---
 CONDA_DIR="$HOME/miniconda3"
 # Añadidos yazi y duf a la lista
-PACKAGES="nvim bat ripgrep fzf zoxide eza btop tldr just uv yazi duf"
+PACKAGES="neovim bat ripgrep fzf zoxide eza btop tldr just uv yazi duf rust"
 
 echo "🚀 Iniciando configuración de entorno para $USER..."
 
@@ -19,6 +19,11 @@ if [ ! -d "$CONDA_DIR" ]; then
 else
     echo "✔ Miniconda ya está instalado."
 fi
+
+curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
+chmod u+x nvim-linux-x86_64.appimage
+mkdir -p ~/.local/bin
+mv nvim-linux-x86_64.appimage ~/.local/bin/nvim
 
 # Cargar conda en la sesión actual del script para poder instalar paquetes inmediatamente
 source "$CONDA_DIR/etc/profile.d/conda.sh"
@@ -59,3 +64,4 @@ add_to_bashrc 'eval "$(zoxide init bash)"'
 
 echo "🎉 ¡Todo listo! Las herramientas están instaladas y los alias configurados."
 echo "👉 IMPORTANTE: Ejecuta 'source ~/.bashrc' para activar todo ahora mismo."
+echo "👉 conda install -c conda-forge $PACKAGES"
