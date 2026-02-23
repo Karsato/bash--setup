@@ -5,51 +5,59 @@ CONDA_DIR="$HOME/miniconda3"
 ENV_FILE="$HOME/.bash_dev_env"
 PACKAGES="neovim bat ripgrep fzf zoxide eza btop tldr just uv yazi duf rust"
 
-echo "🚀 Iniciando configuración modular..."
+# --- FUNCIÓN DE DESINSTALACIÓN ---
+uninstall_env() {
+  echo "🗑 Iniciando desinstalación..."
+  [ -f "$ENV_FILE" ] && rm "$ENV_FILE"
+  [ -d "$CONDA_DIR" ] && rm -rf "$CONDA_DIR"
 
-# 1. Instalar Miniconda si no existe
+  for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
+    if [ -f "$RC" ]; then
+      sed -i "/# Carga de entorno de asignatura/d" "$RC"
+      sed -i "\|\[ -f $ENV_FILE \]|d" "$RC"
+    fi
+  done
+  echo "✨ Sistema limpio."
+  exit 0
+}
+
+if [ "$1" == "--uninstall" ]; then
+  uninstall_env
+fi
+
+echo "🚀 Configurando entorno para $USER..."
+
+# 1. Instalación de Miniconda
 if [ ! -d "$CONDA_DIR" ]; then
-  echo "📦 Instalando Miniconda..."
   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   bash miniconda.sh -b -p "$CONDA_DIR"
   rm miniconda.sh
 fi
 
-# 2. Cargar Conda para la sesión actual del script (evitando errores de shell)
-source "$CONDA_DIR/etc/profile.d/conda.sh" 2>/dev/null
-
-# 3. Configurar canales y ToS
-echo "⚖️ Configurando canales (prioridad conda-forge)..."
+# 2. Cargar para instalación inmediata
+source "$CONDA_DIR/etc/profile.d/conda.sh"
+conda config --set auto_activate_base true --quiet
 conda config --add channels conda-forge --quiet
-conda config --set channel_priority strict --quiet
 
-# 4. Instalar paquetes
-echo "🛠 Instalando herramientas..."
+# 3. Instalación de paquetes
+echo "🛠 Instalando paquetes..."
 conda install -y $PACKAGES
 
-# 5. Crear el archivo de configuración modular con "Interruptor"
-echo "📝 Generando $ENV_FILE..."
+# 4. Crear el archivo de entorno (Solo con lo esencial)
+echo "📝 Creando $ENV_FILE..."
 cat <<'EOF' >"$ENV_FILE"
-# --- ENTORNO DE DESARROLLO MODULAR ---
+# --- CONFIGURACIÓN DE ENTORNO ---
 
-# Si la variable DISABLE_DEV_ENV existe, no cargar nada
-if [ -n "$DISABLE_DEV_ENV" ]; then
-    return 0
-fi
+# Si quieres desactivar todo, descomenta la siguiente línea:
+# return 0 
 
-# Evitar errores de compatibilidad Bash/Zsh en scripts de activación
-if [ -n "$ZSH_VERSION" ]; then
-    emulate -L bash 2>/dev/null
-fi
-
-# Cargar Conda
+# Cargar Conda y activar base
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
     source "$HOME/miniconda3/etc/profile.d/conda.sh"
-    # Silenciar el error específico de toolchain_activate.sh si ocurre
-    conda activate base 2>/dev/null
+    conda activate base
 fi
 
-# Alias
+# Alias básicos
 alias cat='bat'
 alias ls='eza --icons'
 alias l='eza -lh --icons'
@@ -60,25 +68,19 @@ alias df='duf'
 alias fe='nvim $(fzf)'
 alias despertar='make -C ~/make servidor--despertar'
 
-# Configuración de herramientas
+# Herramientas
 export FZF_DEFAULT_COMMAND='rg --files --hidden --no-ignore-vcs --glob "!.git/*"'
 
-# Inicializar zoxide según el shell activo
-if [ -n "$ZSH_VERSION" ]; then
-    eval "$(zoxide init zsh)"
-else
-    eval "$(zoxide init bash)"
-fi
+# Zoxide (detecta automáticamente el shell)
+eval "$(zoxide init $(basename $SHELL))"
 EOF
 
-# 6. Vincular a los archivos de inicio (.bashrc y .zshrc)
+# 5. Añadir a los archivos de inicio
 ENTRY_LINE="[ -f $ENV_FILE ] && source $ENV_FILE"
-
 for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
   if [ -f "$RC" ]; then
-    grep -qF "$ENV_FILE" "$RC" || echo -e "\n# Carga de entorno modular\n$ENTRY_LINE" >>"$RC"
+    grep -qF "$ENV_FILE" "$RC" || echo -e "\n# Carga de entorno de asignatura\n$ENTRY_LINE" >>"$RC"
   fi
 done
 
-echo "🎉 ¡Hecho! El error '=' debería desaparecer al reiniciar."
-echo "👉 Para desactivar temporalmente: export DISABLE_DEV_ENV=true"
+echo "🎉 ¡Hecho! Ejecuta 'source ~/.bashrc' o 'source ~/.zshrc' para empezar."
