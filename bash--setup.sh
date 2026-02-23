@@ -5,29 +5,41 @@ CONDA_DIR="$HOME/miniconda3"
 ENV_FILE="$HOME/.bash_dev_env"
 PACKAGES="neovim bat ripgrep fzf zoxide eza btop tldr just uv yazi duf rust"
 
-echo "🚀 Iniciando configuración modular para $USER..."
+echo "🚀 Iniciando configuración modular..."
 
 # 1. Instalar Miniconda si no existe
 if [ ! -d "$CONDA_DIR" ]; then
-  echo "📦 Instalando Miniconda..."
+  echo "📦 Descargando e instalando Miniconda..."
   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   bash miniconda.sh -b -p "$CONDA_DIR"
   rm miniconda.sh
-  "$CONDA_DIR/bin/conda" init bash
 fi
 
-# 2. Crear/Limpiar el archivo de configuración independiente
-echo "# --- ENTORNO DE DESARROLLO (MODULAR) ---" >"$ENV_FILE"
-
-# 3. Instalar herramientas
+# 2. Cargar Conda EN ESTE SCRIPT para que funcione 'conda install' a la primera
 source "$CONDA_DIR/etc/profile.d/conda.sh"
-conda activate base
-echo "🛠 Instalando paquetes..."
-conda install -y -c conda-forge $PACKAGES
 
-# 4. Escribir Alias y Configuración en el archivo independiente
-cat <<'EOF' >>"$ENV_FILE"
-# Alias de herramientas
+# 3. SOLUCIÓN AL ERROR DE ANACONDA (ToS)
+# Configuramos conda para que use conda-forge como prioridad y aceptamos términos
+echo "⚖️ Aceptando términos de servicio y configurando canales..."
+conda config --set env_prompt '({name}) '
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+
+# 4. Instalar paquetes (ahora sí funcionará a la primera)
+echo "🛠 Instalando herramientas ($PACKAGES)..."
+conda install -y $PACKAGES
+
+# 5. Crear el archivo de configuración modular
+echo "📝 Creando archivo de entorno en $ENV_FILE..."
+cat <<'EOF' >"$ENV_FILE"
+# --- ENTORNO DE DESARROLLO MODULAR ---
+# Solo añadir si conda está instalado
+if [ -d "$HOME/miniconda3" ]; then
+    source "$HOME/miniconda3/etc/profile.d/conda.sh"
+    conda activate base
+fi
+
+# Alias
 alias cat='bat'
 alias ls='eza --icons'
 alias l='eza -lh --icons'
@@ -36,20 +48,25 @@ alias grep='rg'
 alias y='yazi'
 alias df='duf'
 alias fe='nvim $(fzf)'
+alias despertar='make -C ~/make servidor--despertar'
 
-# Configuraciones de entorno
+# Configs
 export FZF_DEFAULT_COMMAND='rg --files --hidden --no-ignore-vcs --glob "!.git/*"'
-eval "$(zoxide init bash)"
-
-# Indicador visual de que el entorno está activo (opcional)
-echo "✨ Entorno de desarrollo activado."
+eval "$(zoxide init ${SHELL##*/})"
 EOF
 
-# 5. Puerta de enlace en .bashrc (Solo una vez)
+# 6. INYECTAR EN BASH Y ZSH (Para que funcione en cualquier terminal del alumno)
 ENTRY_LINE="[ -f $ENV_FILE ] && source $ENV_FILE"
-if ! grep -qF "$ENV_FILE" ~/.bashrc; then
-  echo -e "\n# Carga del entorno de desarrollo modular\n$ENTRY_LINE" >>~/.bashrc
+
+# Para Bash
+if [ -f ~/.bashrc ]; then
+  grep -qF "$ENV_FILE" ~/.bashrc || echo -e "\n$ENTRY_LINE" >>~/.bashrc
 fi
 
-echo "✅ Configuración completada."
-echo "👉 Ejecuta: source ~/.bashrc"
+# Para Zsh (El que usas tú según la captura)
+if [ -f ~/.zshrc ]; then
+  grep -qF "$ENV_FILE" ~/.zshrc || echo -e "\n$ENTRY_LINE" >>~/.zshrc
+fi
+
+echo "🎉 ¡Todo listo! No hace falta ejecutarlo dos veces."
+echo "👉 IMPORTANTE: Cierra esta terminal y abre una nueva o ejecuta: source $ENV_FILE"
