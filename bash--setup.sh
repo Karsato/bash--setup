@@ -7,7 +7,7 @@ PACKAGES="neovim bat ripgrep fzf zoxide eza btop tldr just uv yazi duf rust"
 
 # --- FUNCIÓN DE DESINSTALACIÓN ---
 uninstall_env() {
-  echo "🗑 Iniciando desinstalación..."
+  echo "🗑 Iniciando desinstalación completa..."
   [ -f "$ENV_FILE" ] && rm "$ENV_FILE"
   [ -d "$CONDA_DIR" ] && rm -rf "$CONDA_DIR"
 
@@ -17,7 +17,7 @@ uninstall_env() {
       sed -i "\|\[ -f $ENV_FILE \]|d" "$RC"
     fi
   done
-  echo "✨ Sistema limpio."
+  echo "✨ Todo limpio. Cierra y abre la terminal."
   exit 0
 }
 
@@ -29,6 +29,7 @@ echo "🚀 Configurando entorno para $USER..."
 
 # 1. Instalación de Miniconda
 if [ ! -d "$CONDA_DIR" ]; then
+  echo "📦 Instalando Miniconda..."
   wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   bash miniconda.sh -b -p "$CONDA_DIR"
   rm miniconda.sh
@@ -43,21 +44,18 @@ conda config --add channels conda-forge --quiet
 echo "🛠 Instalando paquetes..."
 conda install -y $PACKAGES
 
-# 4. Crear el archivo de entorno (Solo con lo esencial)
+# 4. Crear el archivo de entorno modular
 echo "📝 Creando $ENV_FILE..."
 cat <<'EOF' >"$ENV_FILE"
-# --- CONFIGURACIÓN DE ENTORNO ---
+# --- CONFIGURACIÓN DE ENTORNO MODULAR ---
 
-# Si quieres desactivar todo, descomenta la siguiente línea:
-# return 0 
-
-# Cargar Conda y activar base
+# Cargar Conda y activar entorno base
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
     source "$HOME/miniconda3/etc/profile.d/conda.sh"
     conda activate base
 fi
 
-# Alias básicos
+# Alias de herramientas
 alias cat='bat'
 alias ls='eza --icons'
 alias l='eza -lh --icons'
@@ -68,19 +66,20 @@ alias df='duf'
 alias fe='nvim $(fzf)'
 alias despertar='make -C ~/make servidor--despertar'
 
-# Herramientas
+# Configuración de FZF y Zoxide
 export FZF_DEFAULT_COMMAND='rg --files --hidden --no-ignore-vcs --glob "!.git/*"'
-
-# Zoxide (detecta automáticamente el shell)
-eval "$(zoxide init $(basename $SHELL))"
+eval "$(zoxide init $(basename ${SHELL:-bash}))"
 EOF
 
-# 5. Añadir a los archivos de inicio
+# 5. Añadir a los archivos de inicio (.bashrc y .zshrc)
 ENTRY_LINE="[ -f $ENV_FILE ] && source $ENV_FILE"
 for RC in "$HOME/.bashrc" "$HOME/.zshrc"; do
   if [ -f "$RC" ]; then
-    grep -qF "$ENV_FILE" "$RC" || echo -e "\n# Carga de entorno de asignatura\n$ENTRY_LINE" >>"$RC"
+    if ! grep -qF "$ENV_FILE" "$RC"; then
+      echo -e "\n# Carga de entorno de asignatura\n$ENTRY_LINE" >>"$RC"
+    fi
   fi
 done
 
-echo "🎉 ¡Hecho! Ejecuta 'source ~/.bashrc' o 'source ~/.zshrc' para empezar."
+echo "🎉 ¡Configuración finalizada con éxito!"
+echo "👉 Ejecuta 'source $ENV_FILE' para activar los alias ahora."
